@@ -1,0 +1,14 @@
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Oranienbaum&display=swap');@import "tailwindcss";
+
+
+@theme {
+  --font-instrument: "Instrument Serif", serif;
+  --font-oranienbaum: "Oranienbaum", serif; 
+
+  --color-primary-dark: #f35a6f;
+  --color-primary-light: #980c1e;
+  
+  --color-bg-dark: #0D0D0D;
+  --color-bg-light: #EEEEEE;
+
+}
