@@ -1,0 +1,66 @@
+rules_version = '2';
+
+// ============================================================================
+//  THE SERVER-SIDE LOCK
+//
+//  Portfolio content lives in one document: portfolio/content
+//    - everyone can READ it (the public site needs it)
+//    - only shehabsarder97@gmail.com can WRITE it
+//
+//  These rules run inside Firestore, not in the browser, so they cannot be
+//  bypassed by editing JS, calling the REST API directly, or using curl.
+//
+//  Where to put this file:
+//    1) Firebase Console -> Firestore Database -> Rules -> paste -> Publish
+//    2) or: firebase deploy --only firestore:rules
+// ============================================================================
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ------------------------------------------------------------------
+    //  Who is the owner?  (ACTIVE: pinned Gmail address)
+    // ------------------------------------------------------------------
+    function isOwner() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email.lower() == 'shehabsarder97@gmail.com';
+    }
+
+    // OPTION A (stronger) — pin your immutable user ID instead of the email.
+    // Console -> Authentication -> Users -> copy the "User UID" next to your
+    // Google account, then swap the function above for this one:
+    //
+    // function isOwner() {
+    //   return request.auth != null
+    //     && request.auth.uid in [
+    //       'PASTE_YOUR_FIREBASE_UID_HERE'
+    //     ];
+    // }
+    //
+    // A uid never changes, so renaming your Google address can never lock you
+    // out — and an address that Google later re-assigns can never get in.
+
+    // ------------------------------------------------------------------
+    //  The content document
+    // ------------------------------------------------------------------
+    match /portfolio/{docId} {
+      // Public site reads this.
+      allow read: if true;
+
+      // create / update / delete — owner only.
+      allow write: if isOwner()
+        // An empty document would blank out the whole site.
+        && request.resource.data.keys().size() > 0;
+
+      // Optional extra hardening — require the core sections to survive a save:
+      // && request.resource.data.keys().hasAll(['site', 'hero', 'projects'])
+    }
+
+    // ------------------------------------------------------------------
+    //  Everything else: no access at all.
+    // ------------------------------------------------------------------
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
