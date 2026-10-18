@@ -52,6 +52,11 @@ export const defaultContent = {
         tech: ['Python', 'PyTorch', 'Computer Vision', 'Android', 'REST API'],
         github: 'https://github.com',
         demo: 'https://example.com',
+        /** Extra tagged repositories — hidden on the card, listed in the popup. */
+        links: [
+          { label: 'Backend', url: 'https://github.com' },
+          { label: 'Mobile App', url: 'https://github.com' },
+        ],
         image:
           'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80',
         video: 'https://youtu.be/FtutLA63Cp8?si=Zwzbm6FjotzCa5T0',
@@ -65,6 +70,11 @@ export const defaultContent = {
         tech: ['Java', 'Spring Boot', 'React', 'React Native', 'MySQL', 'JWT'],
         github: 'https://github.com',
         demo: 'https://example.com',
+        links: [
+          { label: 'Frontend', url: 'https://github.com' },
+          { label: 'Backend', url: 'https://github.com' },
+          { label: 'Mobile App', url: 'https://github.com' },
+        ],
         image:
           'https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=1200&q=80',
         video: '',
@@ -78,6 +88,7 @@ export const defaultContent = {
         tech: ['React', 'Firebase'],
         github: 'https://github.com',
         demo: 'https://example.com',
+        links: [],
         image: '',
         video: 'https://youtu.be/dQw4w9WgXcQ',
         pinned: false,
@@ -90,6 +101,7 @@ export const defaultContent = {
         tech: ['JavaScript', 'Tailwind', 'Node.js'],
         github: 'https://github.com',
         demo: 'https://example.com',
+        links: [],
         image:
           'https://images.unsplash.com/photo-1461749280684-dccba630e2f6?auto=format&fit=crop&w=1200&q=80',
         video: '',
@@ -103,6 +115,7 @@ export const defaultContent = {
         tech: ['Python', 'Bash'],
         github: 'https://github.com',
         demo: 'https://example.com',
+        links: [],
         image:
           'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=1200&q=80',
         video: '',
@@ -116,6 +129,7 @@ export const defaultContent = {
         tech: ['TypeScript', 'Express'],
         github: 'https://github.com',
         demo: 'https://example.com',
+        links: [],
         image:
           'https://images.unsplash.com/photo-1555099962-4199c345e5dd?auto=format&fit=crop&w=1200&q=80',
         video: '',

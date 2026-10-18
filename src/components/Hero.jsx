@@ -6,7 +6,7 @@ export default function Hero() {
     const hero = content.hero ?? {};
 
     return (
-        <section className="bg-bg-dark text-bg-light min-h-[calc(100vh-5rem)] flex flex-col justify-end md:justify-center px-6 py-12 md:py-0">
+        <section id="home" className="bg-bg-dark text-bg-light min-h-[calc(100vh-5rem)] flex flex-col justify-end md:justify-center px-6 py-12 md:py-0">
             <div className="max-w-6xl w-full mx-auto flex flex-col items-start space-y-6">
 
                 {/* Role & Status */}

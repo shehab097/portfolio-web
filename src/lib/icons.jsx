@@ -341,6 +341,25 @@ export const icons = {
       <line x1="6" y1="6" x2="18" y2="18" />
     </S>
   ),
+  chevron: (p) => (
+    <S {...p}>
+      <polyline points="9 18 15 12 9 6" />
+    </S>
+  ),
+  external: (p) => (
+    <S {...p}>
+      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+      <polyline points="15 3 21 3 21 9" />
+      <line x1="10" y1="14" x2="21" y2="3" />
+    </S>
+  ),
+  alert: (p) => (
+    <S {...p}>
+      <circle cx="12" cy="12" r="10" />
+      <line x1="12" y1="8" x2="12" y2="12" />
+      <line x1="12" y1="16" x2="12.01" y2="16" />
+    </S>
+  ),
 }
 
 export const ICON_NAMES = Object.keys(icons).sort()

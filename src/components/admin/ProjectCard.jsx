@@ -4,6 +4,7 @@ import { UPLOADS_ENABLED } from '../../lib/storage';
 import { ArrowIcon, Caret, CopyIcon, GhostButton, IconButton, inputClass, Labeled, PinIcon, TrashIcon } from './controls';
 import { Icon } from '../../lib/icons';
 import ImageField from './ImageField';
+import LinksEditor from './LinksEditor';
 import TagInput from './TagInput';
 
 /**
@@ -152,11 +153,11 @@ export default function ProjectCard({
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <Labeled label="GitHub URL">
+                        <Labeled label="Primary GitHub URL" hint="its README shows in the popup">
                             <input
                                 className={inputClass}
                                 value={project.github ?? ''}
-                                placeholder="https://github.com/…"
+                                placeholder="https://github.com/owner/repo"
                                 onInput={(event) => patch({ github: event.currentTarget.value })}
                             />
                         </Labeled>
@@ -169,6 +170,10 @@ export default function ProjectCard({
                             />
                         </Labeled>
                     </div>
+
+                    <Labeled label="Additional links" hint="hidden on the card, listed in the popup">
+                        <LinksEditor value={project.links} onChange={(links) => patch({ links })} />
+                    </Labeled>
 
                     <div className="flex flex-wrap items-center justify-between gap-3 pt-1 border-t border-white/10">
                         <label className="flex items-center gap-3 pt-3 cursor-pointer">

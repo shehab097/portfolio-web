@@ -12,3 +12,156 @@
   --color-bg-light: #EEEEEE;
 
 }
+
+/* ---------------------------------------------------------------------------
+   Rendered README (project popup)
+   `marked` produces plain HTML, so everything is styled here to match the site.
+--------------------------------------------------------------------------- */
+.md-body {
+  font-family: var(--font-instrument);
+  font-size: 1.05rem;
+  line-height: 1.75;
+  color: color-mix(in srgb, var(--color-bg-light) 80%, transparent);
+  overflow-wrap: anywhere;
+}
+
+.md-body > *:first-child {
+  margin-top: 0;
+}
+
+.md-body > * + * {
+  margin-top: 1rem;
+}
+
+.md-body h1,
+.md-body h2,
+.md-body h3,
+.md-body h4,
+.md-body h5,
+.md-body h6 {
+  font-family: var(--font-oranienbaum);
+  color: var(--color-bg-light);
+  line-height: 1.25;
+  margin-top: 2rem;
+  margin-bottom: 0.75rem;
+}
+
+.md-body h1 { font-size: 2rem; }
+.md-body h2 {
+  font-size: 1.6rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid rgb(238 238 238 / 0.12);
+}
+.md-body h3 { font-size: 1.3rem; }
+.md-body h4 { font-size: 1.1rem; }
+
+.md-body a {
+  color: var(--color-primary-dark);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+  text-decoration-color: color-mix(in srgb, var(--color-primary-dark) 40%, transparent);
+}
+.md-body a:hover { text-decoration-thickness: 2px; }
+
+.md-body strong { color: var(--color-bg-light); font-weight: 600; }
+.md-body em { font-style: italic; }
+
+.md-body ul,
+.md-body ol {
+  padding-left: 1.4rem;
+}
+.md-body ul { list-style: disc; }
+.md-body ol { list-style: decimal; }
+.md-body li + li { margin-top: 0.35rem; }
+.md-body li::marker { color: color-mix(in srgb, var(--color-bg-light) 40%, transparent); }
+
+.md-body blockquote {
+  border-left: 2px solid color-mix(in srgb, var(--color-primary-dark) 50%, transparent);
+  padding-left: 1rem;
+  font-style: italic;
+  color: color-mix(in srgb, var(--color-bg-light) 62%, transparent);
+}
+
+.md-body code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.875em;
+  background: rgb(238 238 238 / 0.07);
+  border: 1px solid rgb(238 238 238 / 0.08);
+  border-radius: 0.3rem;
+  padding: 0.1rem 0.35rem;
+}
+
+.md-body pre {
+  background: #080808;
+  border: 1px solid rgb(238 238 238 / 0.1);
+  border-radius: 0.6rem;
+  padding: 1rem 1.1rem;
+  overflow-x: auto;
+}
+.md-body pre code {
+  background: none;
+  border: 0;
+  padding: 0;
+  font-size: 0.85rem;
+  line-height: 1.65;
+}
+
+.md-body img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.6rem;
+  border: 1px solid rgb(238 238 238 / 0.1);
+}
+
+.md-body hr {
+  border: 0;
+  border-top: 1px solid rgb(238 238 238 / 0.12);
+  margin: 2rem 0;
+}
+
+.md-body table {
+  display: block;
+  width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+.md-body th,
+.md-body td {
+  border: 1px solid rgb(238 238 238 / 0.12);
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+}
+.md-body th {
+  background: rgb(238 238 238 / 0.05);
+  color: var(--color-bg-light);
+  font-weight: 600;
+}
+
+.md-body input[type='checkbox'] {
+  margin-right: 0.4rem;
+  accent-color: var(--color-primary-dark);
+}
+
+/* Project popup entrance */
+@keyframes modal-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.modal-panel {
+  animation: modal-panel-in 180ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modal-panel {
+    animation: none;
+  }
+}

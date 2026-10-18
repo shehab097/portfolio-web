@@ -145,7 +145,30 @@ with unpublished edits.
   the editor offers the URL field instead of a button Firebase has already rejected.
 - **Video poster** — a YouTube URL is previewed through `img.youtube.com` (no iframe), so the
   admin thumbnail matches what visitors see.
+- **Additional links** (`LinksEditor`) — a list of `{ label, url }` rows with a datalist of
+  common tags. Stored as `links[]`; the public card ignores them entirely and only the popup
+  shows them, so a project can span Frontend + Backend + Mobile without cluttering the grid.
 - Tech stacks are edited as **chips** (Enter or comma to add, Backspace to remove).
+
+### The project popup (`ProjectModal`)
+
+Clicking a card — anywhere, or the **Details** button / the title button — opens a dialog with
+the media, description, tech, **every link**, and the **README of the primary repository**.
+
+- `projectLinks()` in `lib/projects.js` normalises display order: primary code → live demo →
+  extra tagged links, dropping blank rows.
+- `lib/github.js` parses `owner/repo` out of any GitHub URL shape and fetches the README from
+  the public API (`Accept: vnd.github.v3.raw`). No token; 60 req/hour per visitor IP. 404 and
+  403/429 are mapped to readable messages rather than errors.
+- `components/Markdown.jsx` lazily imports `marked` + `dompurify`, so a README costs ~25 kB
+  gzipped *only* when a popup actually opens one. Rendered HTML is sanitised before it touches
+  the DOM, and repo-relative `src`/`href` values are rewritten against `raw`/`blob` URLs on the
+  repo so screenshots and doc links resolve.
+- `.md-body` in `index.css` styles the rendered markdown with the site's own fonts and palette.
+- Dialog behaviour: `Escape` and backdrop click close it, background scrolling is locked, focus
+  moves into the panel and returns to the trigger, and `role="dialog"` + `aria-modal` are set.
+- The card's own links and its YouTube iframe keep their native behaviour — clicks there never
+  open the popup.
 
 ### Everything else — generic editor (`JsonField`)
 
@@ -178,17 +201,21 @@ src/
 │   ├── auth.jsx               Google sign-in + isAdmin
 │   ├── content.jsx            Firestore-backed content store
 │   ├── router.jsx             history router + link interception
-│   ├── projects.js            ordering + pinning rules (shared)
+│   ├── projects.js            ordering, pinning + link rules (shared)
 │   ├── media.js               YouTube id/embed/poster helpers
+│   ├── github.js              repo URL parsing + README retrieval
 │   ├── storage.js             image upload (lazy-loaded Storage SDK)
 │   └── icons.jsx              icon registry (name → SVG)
 ├── data/defaultContent.js     the portfolio itself (fallback + shape)
 ├── components/                public sections, now data-driven
+│   ├── ProjectModal.jsx       project popup: links + rendered README
+│   ├── Markdown.jsx           sanitised markdown (lazy marked + dompurify)
 │   └── admin/
 │       ├── controls.jsx       buttons, inputs, icons shared by the editors
 │       ├── ProjectsEditor.jsx card list: add / sort / pin
 │       ├── ProjectCard.jsx    one collapsible project card
-│       ├── ImageField.jsx     thumbnail preview + upload
+│       ├── ImageField.jsx     thumbnail preview + image source
+│       ├── LinksEditor.jsx    extra tagged repos (Frontend / Backend / …)
 │       ├── IconPicker.jsx     visual icon chooser (searchable grid)
 │       ├── TagInput.jsx       chip editor for string arrays
 │       ├── JsonField.jsx      recursive form for every other section

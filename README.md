@@ -70,8 +70,14 @@ header.
 - **Projects** is a card view. Collapse/expand a card, add, duplicate or delete it, mark it
   **Pinned** (pinned projects always show first, with a badge), reorder it with the ↑ ↓ arrows
   in *Manual order*, or let the site sort by title with the **Sort by** selector. Each card has
-  a **thumbnail preview** — drag an image onto it or press *Upload image* (stored in Firebase
-  Storage), or paste an image URL. Tech stacks are edited as chips.
+  a **thumbnail preview** — paste an image URL (uploads are off, see above). Tech stacks are
+  edited as chips.
+- **Primary GitHub URL** is the repository whose **README is rendered in the project popup** —
+  set it once per project and the popup fills itself in.
+- **Additional links** — when a project spans several repositories, add a row per piece with a
+  **tag** (*Frontend*, *Backend*, *Mobile App*, *Web App*, *API*, … or anything you type).
+  They stay **hidden on the card** and appear only in the popup, along with the primary code
+  link and the live demo.
 - **Every other section** uses a calm recursive form: nested groups collapse, chips for string
   lists, textareas for long copy, and a **searchable visual icon picker** for icon fields.
 - **Raw JSON** (bottom of the rail) shows the whole document — format, copy, download, import.
@@ -81,6 +87,23 @@ header.
 The public site reads the same document, so published changes appear after a reload. If
 Firestore is unreachable, visitors get the bundled defaults from
 `src/data/defaultContent.js`.
+
+## Project popups
+
+Clicking a project card (or its **Details** button — the card is keyboard-reachable through the
+title) opens a full popup: media, description, tech chips, **every link** including the extra
+tagged repositories, and the **README of the primary GitHub repository**, rendered as styled
+markdown.
+
+- The README comes from GitHub's public API, anonymously — no token, **60 requests/hour per
+  visitor IP**. It is fetched only when the popup opens, and `marked` + `dompurify` are
+  lazily loaded, so the normal page load is unaffected.
+- Relative images and links inside a README (screenshots in `docs/`, etc.) are rewritten against
+  the repository so they resolve, and all links open in a new tab.
+- Markdown is sanitised before rendering, so a README cannot inject scripts into your site.
+- If the repository is private, missing, or GitHub is rate-limiting, the popup says so and links
+  to the repo instead — it never shows a broken panel.
+- To switch the popup's README source, just change the project's **Primary GitHub URL**.
 
 ## Security
 

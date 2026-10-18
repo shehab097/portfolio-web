@@ -10,7 +10,9 @@
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",
+    "dompurify": "^3.4.17",
     "firebase": "^12.19.0",
+    "marked": "^18.1.1",
     "preact": "^10.29.8",
     "tailwindcss": "^4.3.3"
   },
