@@ -5,23 +5,39 @@ import { navigate } from '../lib/router';
 import { isFirebaseConfigured, missingFirebaseVariables } from '../lib/firebase';
 import { ADMIN_EMAILS, ADMIN_EMAILS_CONFIGURED } from '../config';
 import { CONTENT_SECTIONS, defaultContent } from '../data/defaultContent';
+import ProjectsEditor from '../components/admin/ProjectsEditor';
 import JsonField from '../components/admin/JsonField';
 import JsonEditor from '../components/admin/JsonEditor';
 
-const SECTION_LABELS = {
-    site: 'Site & SEO',
-    navbar: 'Navigation',
-    hero: 'Hero',
-    projects: 'Projects',
-    skills: 'Skills',
-    about: 'About',
-    contact: 'Contact',
+const SECTIONS = [
+    { key: 'site', label: 'Site & SEO', hint: 'Title and description' },
+    { key: 'navbar', label: 'Navigation', hint: 'Menu links' },
+    { key: 'hero', label: 'Hero', hint: 'Name, intro, links' },
+    { key: 'projects', label: 'Projects', hint: 'Cards, sorting, pinning' },
+    { key: 'skills', label: 'Skills', hint: 'Groups and tags' },
+    { key: 'about', label: 'About', hint: 'Background rows' },
+    { key: 'contact', label: 'Contact', hint: 'Links and intro' },
+];
+
+const countOf = (content, key) => {
+    const value = content[key];
+    if (!value) return null;
+    if (key === 'projects') return (value.items ?? []).length;
+    if (key === 'skills') return (value.categories ?? []).length;
+    if (key === 'about') return (value.sections ?? []).length;
+    if (Array.isArray(value.links)) return value.links.length;
+    return null;
 };
 
-const buttonBase =
-    'font-instrument text-base px-4 py-2 rounded-lg border transition-colors disabled:opacity-40 whitespace-nowrap';
+const buttonBase = 'font-instrument text-base px-4 py-2 rounded-lg border transition-colors disabled:opacity-40 whitespace-nowrap';
 const buttonGhost = `${buttonBase} border-white/15 text-bg-light/70 hover:border-primary-dark hover:text-primary-dark`;
 const buttonPrimary = `${buttonBase} border-primary-dark/60 bg-primary-dark/10 text-primary-dark hover:bg-primary-dark/20`;
+
+/**
+ * "Reset to defaults" is switched off for now. Flip this to `true` to re-enable
+ * the button (it replaces the whole draft with the bundled default content).
+ */
+const RESET_TO_DEFAULTS_ENABLED = false;
 
 export default function Admin() {
     const { user, email, isAdmin, loading, signOutUser } = useAuth();
@@ -39,8 +55,8 @@ export default function Admin() {
         resetToDefaults,
     } = useContent();
 
-    const [tab, setTab] = useState('fields');
     const [section, setSection] = useState(CONTENT_SECTIONS[0]);
+    const [rawJson, setRawJson] = useState(false);
     const [saveError, setSaveError] = useState(null);
     const [savedFlash, setSavedFlash] = useState(false);
 
@@ -78,7 +94,7 @@ export default function Admin() {
             if (!dirty) return undefined;
             event.preventDefault();
             event.returnValue = '';
-            return ''
+            return '';
         };
         window.addEventListener('beforeunload', onBeforeUnload);
         return () => window.removeEventListener('beforeunload', onBeforeUnload);
@@ -93,9 +109,7 @@ export default function Admin() {
             />
         );
     }
-    if (loading) {
-        return <Gate title="Checking your session…" body="One moment." />;
-    }
+    if (loading) return <Gate title="Checking your session…" body="One moment." />;
     if (!user) {
         return (
             <Gate
@@ -115,7 +129,7 @@ export default function Admin() {
                 title="Not authorized"
                 body={`${email} is not allowed to edit this portfolio. Sign in with the owner account instead.`}
                 action={
-                    <div className="flex flex-wrap gap-3">
+                    <div className="flex flex-wrap justify-center gap-3">
                         <button type="button" onClick={() => navigate('/login')} className={buttonGhost}>
                             Switch account
                         </button>
@@ -128,175 +142,206 @@ export default function Admin() {
         );
     }
 
-    const activeValue = content[section] ?? {};
-    const sectionIsEmpty = activeValue === null || activeValue === undefined;
+    const active = SECTIONS.find((item) => item.key === section) ?? SECTIONS[0];
+    const value = content[active.key];
 
     return (
-        <div className="min-h-screen bg-bg-dark text-bg-light flex flex-col">
-            {/* ---------- Top bar ---------- */}
+        <div className="min-h-screen bg-bg-dark text-bg-light">
+            {/* ---------- Header ---------- */}
             <header className="sticky top-0 z-40 bg-bg-dark/95 backdrop-blur border-b border-white/10">
-                <div className="max-w-7xl mx-auto px-4 md:px-6 h-20 flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-3 min-w-0">
-                        <a href="/" className="font-oranienbaum text-2xl tracking-tight hover:text-primary-dark transition-colors shrink-0">
-                            Admin
-                        </a>
-                        <span className="hidden md:inline text-bg-light/20">/</span>
-                        <span className="hidden md:inline font-instrument text-base text-bg-light/50 truncate">
-                            {email}
-                        </span>
-                    </div>
+                <div className="max-w-6xl mx-auto px-4 md:px-6 h-16 flex items-center gap-3">
+                    <a href="/" className="font-oranienbaum text-xl hover:text-primary-dark transition-colors shrink-0">
+                        ← Site
+                    </a>
+                    <span className="text-bg-light/15">|</span>
+                    <span className="font-oranienbaum text-xl shrink-0">Portfolio Admin</span>
 
-                    <div className="flex items-center gap-2 md:gap-3">
-                        <span className="hidden sm:inline">
-                            <StatusPill status={status} dirty={dirty} saving={saving} savedFlash={savedFlash} lastSavedAt={lastSavedAt} />
+                    <div className="ml-auto flex items-center gap-2 md:gap-3 min-w-0">
+                        <span className="hidden md:inline">
+                            <StatusPill
+                                status={status}
+                                dirty={dirty}
+                                saving={saving}
+                                savedFlash={savedFlash}
+                                lastSavedAt={lastSavedAt}
+                            />
                         </span>
                         <button type="button" onClick={revert} disabled={!dirty || saving} className={buttonGhost}>
                             Revert
                         </button>
                         <button type="button" onClick={handleSave} disabled={!dirty || saving} className={buttonPrimary}>
-                            {saving ? 'Saving…' : dirty ? 'Save changes' : 'Saved'}
+                            {saving ? 'Saving…' : 'Save'}
                         </button>
-                        <button type="button" onClick={signOutUser} className={buttonGhost} title="Sign out">
-                            Sign out
+                        <button
+                            type="button"
+                            onClick={signOutUser}
+                            title={email}
+                            aria-label="Sign out"
+                            className={`${buttonGhost} px-2.5`}
+                        >
+                            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                                <polyline points="16 17 21 12 16 7" />
+                                <line x1="21" y1="12" x2="9" y2="12" />
+                            </svg>
                         </button>
                     </div>
                 </div>
-                <div className="sm:hidden px-4 pb-3">
+                <div className="md:hidden px-4 pb-3">
                     <StatusPill status={status} dirty={dirty} saving={saving} savedFlash={savedFlash} lastSavedAt={lastSavedAt} />
                 </div>
             </header>
 
-            <main className="flex-1 w-full max-w-7xl mx-auto px-4 md:px-6 py-8 grid grid-cols-1 lg:grid-cols-[16rem_1fr] gap-8">
-                {/* ---------- Sidebar ---------- */}
-                <aside className="space-y-6">
-                    <div className="space-y-3">
-                        <span className="font-instrument text-sm uppercase tracking-wider text-bg-light/40">Tab</span>
-                        <div className="flex gap-2">
-                            {[
-                                ['fields', 'Fields'],
-                                ['json', 'JSON'],
-                            ].map(([key, label]) => (
+            <div className="max-w-6xl mx-auto px-4 md:px-6 py-8 grid grid-cols-1 lg:grid-cols-[15rem_1fr] gap-8">
+                {/* ---------- Section rail ---------- */}
+                <aside>
+                    <nav className="flex lg:flex-col gap-2 overflow-x-auto pb-2 lg:pb-0 lg:overflow-visible">
+                        {SECTIONS.map((item) => {
+                            const count = countOf(content, item.key);
+                            const activeItem = !rawJson && item.key === section;
+                            return (
                                 <button
-                                    key={key}
+                                    key={item.key}
                                     type="button"
-                                    onClick={() => setTab(key)}
-                                    className={`flex-1 font-instrument text-base px-3 py-2 rounded-lg border transition-colors ${tab === key
+                                    onClick={() => {
+                                        setSection(item.key);
+                                        setRawJson(false);
+                                    }}
+                                    className={`flex items-center gap-2 text-left font-instrument text-base px-3 py-2 rounded-lg border whitespace-nowrap lg:whitespace-normal transition-colors ${activeItem
                                         ? 'border-primary-dark/60 bg-primary-dark/10 text-primary-dark'
-                                        : 'border-white/10 text-bg-light/60 hover:text-primary-dark hover:border-primary-dark/40'
+                                        : 'border-transparent text-bg-light/65 hover:text-primary-dark hover:bg-white/[0.03]'
                                         }`}
                                 >
-                                    {label}
+                                    <span className="flex-1">{item.label}</span>
+                                    {count !== null && (
+                                        <span className={`font-instrument text-xs ${activeItem ? 'text-primary-dark/80' : 'text-bg-light/30'}`}>
+                                            {count}
+                                        </span>
+                                    )}
                                 </button>
-                            ))}
-                        </div>
-                    </div>
+                            );
+                        })}
 
-                    {tab === 'fields' && (
-                        <div className="space-y-2">
-                            <span className="font-instrument text-sm uppercase tracking-wider text-bg-light/40">Sections</span>
-                            <nav className="flex lg:flex-col gap-2 overflow-x-auto pb-1">
-                                {CONTENT_SECTIONS.map((key) => (
-                                    <button
-                                        key={key}
-                                        type="button"
-                                        onClick={() => setSection(key)}
-                                        className={`text-left font-instrument text-lg px-3 py-2 rounded-lg border whitespace-nowrap lg:whitespace-normal transition-colors ${section === key
-                                            ? 'border-primary-dark/60 bg-primary-dark/10 text-primary-dark'
-                                            : 'border-transparent text-bg-light/70 hover:text-primary-dark hover:bg-white/[0.03]'
-                                            }`}
-                                    >
-                                        {SECTION_LABELS[key] ?? key}
-                                        <span className="block font-instrument text-xs text-bg-light/30">{key}</span>
-                                    </button>
-                                ))}
-                            </nav>
-                        </div>
-                    )}
-
-                    <div className="space-y-2 border-t border-white/10 pt-4">
-                        <button
-                            type="button"
-                            onClick={() => {
-                                if (window.confirm('Replace every field with the built-in defaults? This only changes the draft until you save.')) {
-                                    resetToDefaults();
+                        <div className="hidden lg:block border-t border-white/10 mt-2 pt-2">
+                            <button
+                                type="button"
+                                onClick={() => setRawJson((current) => !current)}
+                                className={`w-full flex items-center gap-2 text-left font-instrument text-base px-3 py-2 rounded-lg border transition-colors ${rawJson
+                                    ? 'border-primary-dark/60 bg-primary-dark/10 text-primary-dark'
+                                    : 'border-transparent text-bg-light/65 hover:text-primary-dark hover:bg-white/[0.03]'
+                                    }`}
+                            >
+                                <span className="flex-1">Raw JSON</span>
+                                <span className="font-instrument text-xs text-bg-light/30">{'{}'}</span>
+                            </button>
+                            <span
+                                className="block"
+                                title={
+                                    RESET_TO_DEFAULTS_ENABLED
+                                        ? undefined
+                                        : 'Disabled for now — re-enable it in src/pages/Admin.jsx'
                                 }
-                            }}
-                            className={`${buttonGhost} w-full`}
-                        >
-                            Reset to defaults
-                        </button>
-                        <p className="font-instrument text-xs text-bg-light/35 leading-relaxed">
-                            {Object.keys(defaultContent).length} sections ·{' '}
-                            {(defaultContent.projects?.items ?? []).length} default projects
-                        </p>
-                    </div>
+                            >
+                                <button
+                                    type="button"
+                                    disabled={!RESET_TO_DEFAULTS_ENABLED}
+                                    onClick={() => {
+                                        if (!RESET_TO_DEFAULTS_ENABLED) return;
+                                        if (
+                                            window.confirm(
+                                                'Replace every field with the built-in defaults? This only changes the draft until you save.',
+                                            )
+                                        ) {
+                                            resetToDefaults();
+                                        }
+                                    }}
+                                    className={`w-full text-left font-instrument text-sm px-3 py-2 rounded-lg transition-colors ${RESET_TO_DEFAULTS_ENABLED
+                                        ? 'text-bg-light/40 hover:text-primary-dark'
+                                        : 'text-bg-light/20 cursor-not-allowed'
+                                        }`}
+                                >
+                                    Reset to defaults
+                                </button>
+                            </span>
+                        </div>
+                    </nav>
+
+                    <button
+                        type="button"
+                        onClick={() => setRawJson((current) => !current)}
+                        className={`lg:hidden mt-2 w-full font-instrument text-base px-3 py-2 rounded-lg border transition-colors ${rawJson
+                            ? 'border-primary-dark/60 bg-primary-dark/10 text-primary-dark'
+                            : 'border-white/15 text-bg-light/65'
+                            }`}
+                    >
+                        {rawJson ? 'Back to editor' : 'Raw JSON'}
+                    </button>
                 </aside>
 
                 {/* ---------- Editor ---------- */}
-                <section className="space-y-6 min-w-0">
-                    {saveError && (
-                        <div className="border border-red-400/40 bg-red-400/5 rounded-lg px-4 py-3 font-instrument text-sm text-red-200/90">
-                            {saveError}
-                        </div>
-                    )}
-                    {error && (
-                        <div className="border border-red-400/40 bg-red-400/5 rounded-lg px-4 py-3 font-instrument text-sm text-red-200/90">
-                            Firestore: {error}
-                        </div>
-                    )}
+                <main className="min-w-0 space-y-6">
+                    {saveError && <Banner tone="error">{saveError}</Banner>}
+                    {error && <Banner tone="error">Firestore: {error}</Banner>}
                     {!ADMIN_EMAILS_CONFIGURED && (
-                        <div className="border border-amber-400/40 bg-amber-400/5 rounded-lg px-4 py-3 font-instrument text-sm text-amber-200/90">
-                            You are signed in, but no real owner address is configured yet. Set{' '}
-                            <code>VITE_ADMIN_EMAILS</code> in <code>.env</code> and mirror it in{' '}
-                            <code>firestore.rules</code> so only your account can publish.
-                        </div>
+                        <Banner tone="warn">
+                            You are signed in, but no owner address is configured. Set <code>VITE_ADMIN_EMAILS</code> in{' '}
+                            <code>.env</code> and mirror it in <code>firestore.rules</code> so only your account can publish.
+                        </Banner>
                     )}
 
-                    {tab === 'fields' ? (
-                        <div className="space-y-6">
-                            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-white/10 pb-4">
-                                <div className="space-y-2">
-                                    <span className="font-instrument text-lg text-primary-dark tracking-wide">
-                                        {section}
-                                    </span>
-                                    <h1 className="font-oranienbaum text-3xl md:text-4xl tracking-tight">
-                                        {SECTION_LABELS[section] ?? section}
-                                    </h1>
-                                </div>
-                                <p className="font-instrument text-sm text-bg-light/45 max-w-sm">
-                                    Edits appear on the site immediately as a draft. Nothing is public until you press
-                                    Save.
-                                </p>
-                            </div>
+                    {rawJson ? (
+                        <>
+                            <PanelHeader eyebrow="Raw data" title="Portfolio JSON">
+                                The exact document stored in Firestore <code>portfolio/content</code>.
+                            </PanelHeader>
+                            <JsonEditor content={content} onApply={replaceContent} />
+                        </>
+                    ) : (
+                        <>
+                            <PanelHeader eyebrow={active.key} title={active.label}>
+                                {active.hint}. Edits are a draft until you press <span className="text-bg-light/75">Save</span>.
+                            </PanelHeader>
 
-                            {sectionIsEmpty ? (
+                            {active.key === 'projects' ? (
+                                <ProjectsEditor
+                                    value={value ?? {}}
+                                    onChange={(next) => updateContent((current) => ({ ...current, projects: next }))}
+                                />
+                            ) : value === undefined ? (
                                 <p className="font-instrument text-base text-bg-light/50">This section does not exist yet.</p>
                             ) : (
                                 <JsonField
-                                    name={section}
-                                    value={activeValue}
-                                    onChange={(next) => updateContent((current) => ({ ...current, [section]: next }))}
+                                    name={active.key}
+                                    value={value}
+                                    onChange={(next) => updateContent((current) => ({ ...current, [active.key]: next }))}
                                 />
                             )}
-                        </div>
-                    ) : (
-                        <div className="space-y-6">
-                            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-white/10 pb-4">
-                                <div className="space-y-2">
-                                    <span className="font-instrument text-lg text-primary-dark tracking-wide">Raw data</span>
-                                    <h1 className="font-oranienbaum text-3xl md:text-4xl tracking-tight">Portfolio JSON</h1>
-                                </div>
-                                <p className="font-instrument text-sm text-bg-light/45 max-w-sm">
-                                    The exact document stored in Firestore <code>portfolio/content</code>.
-                                </p>
-                            </div>
-                            <JsonEditor content={content} onApply={replaceContent} />
-                        </div>
+                        </>
                     )}
-                </section>
-            </main>
+                </main>
+            </div>
         </div>
     );
+}
+
+function PanelHeader({ eyebrow, title, children }) {
+    return (
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-3 border-b border-white/10 pb-4">
+            <div className="space-y-1.5">
+                <span className="font-instrument text-base text-primary-dark tracking-wide">{eyebrow}</span>
+                <h1 className="font-oranienbaum text-3xl md:text-4xl tracking-tight">{title}</h1>
+            </div>
+            {children && <p className="font-instrument text-sm text-bg-light/45 max-w-sm">{children}</p>}
+        </div>
+    );
+}
+
+function Banner({ tone = 'warn', children }) {
+    const tones = {
+        warn: 'border-amber-400/40 bg-amber-400/5 text-amber-200/90',
+        error: 'border-red-400/40 bg-red-400/5 text-red-200/90',
+    };
+    return <div className={`border rounded-lg px-4 py-3 font-instrument text-sm ${tones[tone]}`}>{children}</div>;
 }
 
 function StatusPill({ status, dirty, saving, savedFlash, lastSavedAt }) {
@@ -304,7 +349,7 @@ function StatusPill({ status, dirty, saving, savedFlash, lastSavedAt }) {
     let tone = 'text-bg-light/50 border-white/15';
 
     if (status === 'local') {
-        label = 'Offline mode — defaults only';
+        label = 'Offline — defaults only';
         tone = 'text-amber-200/80 border-amber-400/40';
     } else if (status === 'error') {
         label = 'Database unreachable';

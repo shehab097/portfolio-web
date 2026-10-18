@@ -40,15 +40,43 @@ npm run preview
    Paste `firestore.rules` into *Firestore → Rules* → **Publish**, or deploy with
    `firebase deploy --only firestore:rules`.
 
-4. Open `/login`, continue with Google, land on `/admin`.
+4. **Storage (for project image uploads) — optional.**
+
+   > **Heads-up:** since **February 3rd 2026** Cloud Storage for Firebase requires the project
+   > to be on the **Blaze (pay-as-you-go)** plan. On the free Spark plan every upload returns
+   > 402/403. Blaze still includes a no-cost tier (5 GB stored, 100 GB/month downloaded,
+   > 5 000 uploads/month for `*.firebasestorage.app` buckets in `us-central1`, `us-east1` or
+   > `us-west1`), so a portfolio costs **$0** — but it does ask for a billing account.
+
+   On Blaze: Firebase console → *Storage* → get started, then paste `storage.rules` into
+   *Storage → Rules* → **Publish**, or deploy with `firebase deploy --only storage`.
+
+   **Uploads are currently switched off.** `UPLOADS_ENABLED` in `src/lib/storage.js` is
+   `false`, so the project card shows a disabled *Upload image* control, keeps the
+   **Image URL** field visible, and the upload SDK is left out of the bundle entirely.
+   Set it to `true` once Storage is live and the button comes back — no other changes needed.
+
+   Until then, put the image somewhere public and paste its URL into the card's
+   **Image URL** field. A refused upload is also remembered, so the editor never keeps
+   offering a button that Firebase has rejected.
+
+5. Open `/login`, continue with Google, land on `/admin`.
 
 ## Editing content
 
-- **Fields** tab: click through the sections and edit anything. Add or remove projects,
-  skills, contact links, nav items, even new fields.
-- **JSON** tab: view/format/import/export the entire document.
-- Press **Save changes** (`⌘/Ctrl + S`) to publish. Until then, edits stay a draft in your
-  browser only. **Revert** throws the draft away.
+The dashboard is one screen: a section rail on the left, the editor on the right, Save in the
+header.
+
+- **Projects** is a card view. Collapse/expand a card, add, duplicate or delete it, mark it
+  **Pinned** (pinned projects always show first, with a badge), reorder it with the ↑ ↓ arrows
+  in *Manual order*, or let the site sort by title with the **Sort by** selector. Each card has
+  a **thumbnail preview** — drag an image onto it or press *Upload image* (stored in Firebase
+  Storage), or paste an image URL. Tech stacks are edited as chips.
+- **Every other section** uses a calm recursive form: nested groups collapse, chips for string
+  lists, textareas for long copy, and a **searchable visual icon picker** for icon fields.
+- **Raw JSON** (bottom of the rail) shows the whole document — format, copy, download, import.
+- Press **Save** (`⌘/Ctrl + S`) to publish. Until then, edits stay a draft in your browser only.
+  **Revert** throws the draft away.
 
 The public site reads the same document, so published changes appear after a reload. If
 Firestore is unreachable, visitors get the bundled defaults from

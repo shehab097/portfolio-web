@@ -1,35 +1,24 @@
 import React, { useEffect, useState } from 'react';
 import { useContent } from '../lib/content';
+import { orderedProjects } from '../lib/projects';
+import { toYouTubeEmbed } from '../lib/media';
+import { Icon } from '../lib/icons';
 
 export default function Projects() {
     const { content } = useContent();
     const projectsConfig = content.projects ?? {};
-    const projects = projectsConfig.items ?? [];
+    const allProjects = orderedProjects(projectsConfig.items ?? [], projectsConfig.sortMode ?? 'manual');
     const previewCount = Number(projectsConfig.previewCount) || 3;
 
     const [showAll, setShowAll] = useState(false);
 
     // Collapse again if the dataset shrinks while browsing.
     useEffect(() => {
-        if (projects.length <= previewCount) setShowAll(false);
-    }, [projects.length, previewCount]);
-
-    // Helper function to convert various YouTube URL formats into clean embed links
-    const getYouTubeEmbedUrl = (url) => {
-        if (!url) return '';
-        let videoId = '';
-        if (url.includes('embed/')) {
-            videoId = url.split('embed/')[1].split('?')[0];
-        } else if (url.includes('watch?v=')) {
-            videoId = url.split('watch?v=')[1].split('&')[0];
-        } else if (url.includes('youtu.be/')) {
-            videoId = url.split('youtu.be/')[1].split('?')[0];
-        }
-        return videoId ? `https://www.youtube.com/embed/${videoId}` : url;
-    };
+        if (allProjects.length <= previewCount) setShowAll(false);
+    }, [allProjects.length, previewCount]);
 
     // Determine which projects to show based on state
-    const visibleProjects = showAll ? projects : projects.slice(0, previewCount);
+    const visibleProjects = showAll ? allProjects : allProjects.slice(0, previewCount);
 
     return (
         <section id="projects" className="bg-bg-dark text-bg-light py-24 px-6">
@@ -44,12 +33,12 @@ export default function Projects() {
                         </h2>
                     </div>
 
-                    {projects.length > previewCount && (
+                    {allProjects.length > previewCount && (
                         <button
                             onClick={() => setShowAll(!showAll)}
                             className="font-instrument text-base md:text-lg px-6 py-2.5 rounded-lg border border-white/20 text-bg-light hover:border-primary-dark hover:text-primary-dark transition-all duration-300 whitespace-nowrap self-start md:self-auto"
                         >
-                            {showAll ? 'Show Less' : 'See More Projects'}
+                            {showAll ? 'Show Less' : `See ${allProjects.length - previewCount} More`}
                         </button>
                     )}
                 </div>
@@ -57,16 +46,17 @@ export default function Projects() {
                 {/* Projects Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                     {visibleProjects.map((project, index) => (
-                        <div
+                        <article
                             key={`${project.title}-${index}`}
-                            className="group bg-white/[0.02] border border-white/10 rounded-xl overflow-hidden flex flex-col justify-between transition-all duration-300 hover:border-primary-dark/50"
+                            className={`group bg-white/[0.02] border rounded-xl overflow-hidden flex flex-col justify-between transition-all duration-300 hover:border-primary-dark/50 ${project.pinned ? 'border-primary-dark/40' : 'border-white/10'
+                                }`}
                         >
                             <div>
                                 {/* Media Container: Renders YouTube video if provided, otherwise renders image */}
                                 <div className="relative h-52 w-full overflow-hidden bg-white/5">
                                     {project.video ? (
                                         <iframe
-                                            src={getYouTubeEmbedUrl(project.video)}
+                                            src={toYouTubeEmbed(project.video)}
                                             title={project.title}
                                             className="w-full h-full border-0"
                                             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -82,6 +72,13 @@ export default function Projects() {
                                             <div className="absolute inset-0 bg-gradient-to-t from-bg-dark via-transparent to-transparent opacity-60 pointer-events-none"></div>
                                         </>
                                     ) : null}
+
+                                    {project.pinned && (
+                                        <span className="absolute top-3 left-3 z-10 inline-flex items-center gap-1.5 font-instrument text-xs uppercase tracking-wider px-2.5 py-1 rounded-md bg-bg-dark/80 border border-primary-dark/50 text-primary-dark backdrop-blur">
+                                            <Icon name="pin" className="w-3.5 h-3.5" />
+                                            Pinned
+                                        </span>
+                                    )}
                                 </div>
 
                                 {/* Content */}
@@ -138,7 +135,7 @@ export default function Projects() {
                                     )}
                                 </div>
                             )}
-                        </div>
+                        </article>
                     ))}
                 </div>
 

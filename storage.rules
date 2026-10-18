@@ -1,0 +1,35 @@
+rules_version = '2';
+
+// ============================================================================
+//  Firebase Storage — project thumbnails uploaded from /admin
+//
+//  - everyone can READ the images (the public site shows them)
+//  - only the owner can UPLOAD, and only images under 5 MB
+//
+//  Where to put this file:
+//    Firebase Console -> Storage -> Rules -> paste -> Publish
+//    or: firebase deploy --only storage
+// ============================================================================
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isOwner() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email.lower() == 'shehabsarder97@gmail.com';
+    }
+
+    match /portfolio/{allPaths=**} {
+      allow read: if true;
+
+      allow write: if isOwner()
+        && request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+
+    // Nothing else is readable or writable.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

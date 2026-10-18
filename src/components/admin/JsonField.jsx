@@ -1,13 +1,18 @@
 import React, { useState } from 'react';
-import { ICON_NAMES } from '../../lib/icons';
+import { ArrowIcon, Caret, GhostButton, IconButton, inputClass, Labeled, PlusIcon, TrashIcon } from './controls';
+import IconPicker from './IconPicker';
+import TagInput from './TagInput';
 
 /**
- * Recursive JSON form editor.
+ * Recursive JSON form editor, tuned for a calm, uncluttered view:
+ *   - one collapsible group per nested object/array,
+ *   - array items are labelled by their own title when they have one,
+ *   - rows reveal their remove / move controls on hover,
+ *   - arrays of plain strings become chips,
+ *   - `icon` keys become a dropdown of the icon registry.
  *
- * Because the portfolio is stored as plain JSON, the admin does not need a
- * bespoke form per section: this walks whatever shape the data has and renders
- * inputs for it — objects, arrays, strings, numbers and booleans. New fields
- * and new array items can be added, existing ones removed or reordered.
+ * The Projects section has its own card editor (ProjectsEditor); this handles
+ * everything else.
  */
 
 const humanize = (key) =>
@@ -29,38 +34,62 @@ const emptyLike = (sample) => {
     return '';
 };
 
-const inputClass =
-    'w-full bg-white/5 border border-white/10 rounded-md px-3 py-2 font-instrument text-base text-bg-light placeholder:text-bg-light/30 focus:outline-none focus:border-primary-dark/60 focus:bg-white/[0.07] transition-colors';
+const truncate = (text, length = 70) => {
+    const value = String(text ?? '');
+    return value.length > length ? `${value.slice(0, length - 1)}…` : value;
+};
 
-const ghostButtonClass =
-    'font-instrument text-xs uppercase tracking-wider px-2.5 py-1 rounded-md border border-white/15 text-bg-light/60 hover:text-primary-dark hover:border-primary-dark/50 transition-colors';
+const swapped = (array, from, to) => {
+    const copy = array.slice();
+    [copy[from], copy[to]] = [copy[to], copy[from]];
+    return copy;
+};
 
-function Row({ children, onRemove, onMoveUp, onMoveDown, className = '' }) {
+function FieldShell({ children, onRemove, onMoveUp, onMoveDown }) {
     return (
-        <div className={`flex items-start gap-2 ${className}`}>
+        <div className="group/field flex items-start gap-2">
             <div className="flex-1 min-w-0">{children}</div>
-            <div className="flex items-center gap-1 pt-1.5 shrink-0">
-                {onMoveUp && (
-                    <button type="button" onClick={onMoveUp} className={ghostButtonClass} title="Move up">
-                        ↑
-                    </button>
-                )}
-                {onMoveDown && (
-                    <button type="button" onClick={onMoveDown} className={ghostButtonClass} title="Move down">
-                        ↓
-                    </button>
-                )}
-                {onRemove && (
-                    <button
-                        type="button"
-                        onClick={onRemove}
-                        className={`${ghostButtonClass} hover:text-red-400 hover:border-red-400/50`}
-                        title="Remove"
-                    >
-                        ×
-                    </button>
-                )}
+            {(onRemove || onMoveUp || onMoveDown) && (
+                <div className="flex items-center gap-1 pt-1 opacity-100 md:opacity-0 md:group-hover/field:opacity-100 md:focus-within:opacity-100 transition-opacity">
+                    {onMoveUp && (
+                        <IconButton label="Move up" onClick={onMoveUp}>
+                            <ArrowIcon direction="up" />
+                        </IconButton>
+                    )}
+                    {onMoveDown && (
+                        <IconButton label="Move down" onClick={onMoveDown}>
+                            <ArrowIcon direction="down" />
+                        </IconButton>
+                    )}
+                    {onRemove && (
+                        <IconButton label="Remove" tone="danger" onClick={onRemove}>
+                            <TrashIcon />
+                        </IconButton>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+}
+
+function Group({ label, meta, actions, children, bordered = true }) {
+    const [open, setOpen] = useState(true);
+
+    return (
+        <div className={bordered ? 'rounded-lg border border-white/10 bg-white/[0.015] overflow-hidden' : ''}>
+            <div className={`flex items-center gap-2 ${bordered ? 'px-3 py-2' : 'py-1'}`}>
+                <button
+                    type="button"
+                    onClick={() => setOpen((current) => !current)}
+                    className="flex items-center gap-2 flex-1 min-w-0 text-left"
+                >
+                    <span className="text-bg-light/40">{<Caret open={open} />}</span>
+                    <span className="font-instrument text-sm uppercase tracking-wider text-primary-dark truncate">{label}</span>
+                    {meta && !open && <span className="font-instrument text-xs text-bg-light/30 truncate hidden sm:inline">{meta}</span>}
+                </button>
+                <div className="flex items-center gap-1.5 shrink-0">{actions}</div>
             </div>
+            {open && <div className={bordered ? 'px-3 pb-3 pt-1 space-y-4 border-t border-white/10' : 'pl-4 space-y-4'}>{children}</div>}
         </div>
     );
 }
@@ -69,64 +98,63 @@ export default function JsonField({ name, value, onChange, onRemove, onMoveUp, o
     const [newKey, setNewKey] = useState('');
     const [addingField, setAddingField] = useState(false);
 
-    const label = typeof name === 'string' ? humanize(name) : `Item ${name}`;
+    const isArrayItem = typeof name === 'number';
+    const fallbackLabel = isArrayItem ? `Item ${name}` : humanize(name);
+    const label = isArrayItem && value?.title ? value.title : fallbackLabel;
 
     /* ---------- arrays ---------- */
     if (Array.isArray(value)) {
-        const addItem = () => {
-            const template = value.length ? emptyLike(value[0]) : '';
-            onChange([...value, template]);
-        };
-        const items = value.map((item, index) => (
-            <JsonField
-                key={index}
-                name={index}
-                value={item}
-                depth={depth + 1}
-                onChange={(next) => {
-                    const copy = value.slice();
-                    copy[index] = next;
-                    onChange(copy);
-                }}
-                onRemove={() => onChange(value.filter((_, i) => i !== index))}
-                onMoveUp={
-                    index > 0
-                        ? () => {
-                            const copy = value.slice();
-                            [copy[index - 1], copy[index]] = [copy[index], copy[index - 1]];
-                            onChange(copy);
-                        }
-                        : undefined
-                }
-                onMoveDown={
-                    index < value.length - 1
-                        ? () => {
-                            const copy = value.slice();
-                            [copy[index + 1], copy[index]] = [copy[index], copy[index + 1]];
-                            onChange(copy);
-                        }
-                        : undefined
-                }
-            />
-        ));
+        const stringOnly = value.every((item) => typeof item === 'string' || typeof item === 'number');
+
+        if (stringOnly) {
+            return (
+                <FieldShell onRemove={onRemove} onMoveUp={onMoveUp} onMoveDown={onMoveDown}>
+                    <Labeled label={label} hint={`${value.length}`}>
+                        <TagInput value={value} onChange={onChange} />
+                    </Labeled>
+                </FieldShell>
+            );
+        }
+
+        const addItem = () => onChange([...value, value.length ? emptyLike(value[0]) : '']);
 
         return (
-            <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                    <span className="font-instrument text-sm uppercase tracking-wider text-primary-dark">{label}</span>
-                    <span className="font-instrument text-xs text-bg-light/35">{value.length} item(s)</span>
-                </div>
-                <div className="space-y-3 border-l border-white/10 pl-3">{items}</div>
-                <button type="button" onClick={addItem} className={ghostButtonClass}>
-                    + Add item
-                </button>
-            </div>
+            <Group
+                label={label}
+                meta={`${value.length} item(s)`}
+                actions={
+                    <GhostButton onClick={addItem}>
+                        <PlusIcon /> Add
+                    </GhostButton>
+                }
+            >
+                {value.map((item, index) => (
+                    <JsonField
+                        key={index}
+                        name={index}
+                        value={item}
+                        depth={depth + 1}
+                        onChange={(next) => {
+                            const copy = value.slice();
+                            copy[index] = next;
+                            onChange(copy);
+                        }}
+                        onRemove={() => onChange(value.filter((_, i) => i !== index))}
+                        onMoveUp={index > 0 ? () => onChange(swapped(value, index, index - 1)) : undefined}
+                        onMoveDown={index < value.length - 1 ? () => onChange(swapped(value, index, index + 1)) : undefined}
+                    />
+                ))}
+                {value.length === 0 && (
+                    <p className="font-instrument text-sm text-bg-light/35">Nothing here yet — use “Add”.</p>
+                )}
+            </Group>
         );
     }
 
     /* ---------- objects ---------- */
     if (isPlainObject(value)) {
         const entries = Object.entries(value);
+
         const addField = () => {
             const key = newKey.trim();
             if (!key || key in value) return;
@@ -135,32 +163,28 @@ export default function JsonField({ name, value, onChange, onRemove, onMoveUp, o
             setAddingField(false);
         };
 
-        return (
-            <div className={depth > 0 ? 'space-y-4 rounded-lg border border-white/10 bg-white/[0.015] p-4' : 'space-y-4'}>
-                {depth > 0 && (
-                    <span className="block font-oranienbaum text-lg text-bg-light">{label}</span>
-                )}
-                <div className="space-y-4">
-                    {entries.map(([key, child]) => (
-                        <JsonField
-                            key={key}
-                            name={key}
-                            value={child}
-                            depth={depth + 1}
-                            onChange={(next) => onChange({ ...value, [key]: next })}
-                            onRemove={() => {
-                                const copy = { ...value };
-                                delete copy[key];
-                                onChange(copy);
-                            }}
-                        />
-                    ))}
-                </div>
+        const body = (
+            <>
+                {entries.map(([key, child]) => (
+                    <JsonField
+                        key={key}
+                        name={key}
+                        value={child}
+                        depth={depth + 1}
+                        onChange={(next) => onChange({ ...value, [key]: next })}
+                        onRemove={() => {
+                            const copy = { ...value };
+                            delete copy[key];
+                            onChange(copy);
+                        }}
+                    />
+                ))}
+
                 {addingField ? (
-                    <div className="flex items-center gap-2 pt-1">
+                    <div className="flex items-center gap-2">
                         <input
                             autoFocus
-                            className={`${inputClass} max-w-[16rem]`}
+                            className={`${inputClass} max-w-[14rem]`}
                             placeholder="new field name"
                             value={newKey}
                             onInput={(event) => setNewKey(event.currentTarget.value)}
@@ -172,89 +196,102 @@ export default function JsonField({ name, value, onChange, onRemove, onMoveUp, o
                                 if (event.key === 'Escape') setAddingField(false);
                             }}
                         />
-                        <button type="button" onClick={addField} className={ghostButtonClass}>
-                            Add
-                        </button>
-                        <button type="button" onClick={() => setAddingField(false)} className={ghostButtonClass}>
-                            Cancel
-                        </button>
+                        <GhostButton onClick={addField}>Add</GhostButton>
+                        <GhostButton onClick={() => setAddingField(false)}>Cancel</GhostButton>
                     </div>
                 ) : (
-                    <button type="button" onClick={() => setAddingField(true)} className={ghostButtonClass}>
-                        + Add field
-                    </button>
+                    <GhostButton onClick={() => setAddingField(true)}>
+                        <PlusIcon /> Field
+                    </GhostButton>
                 )}
-            </div>
+            </>
+        );
+
+        // Top-level sections are framed by the admin panel heading already, so
+        // they render flat. Nested objects get a collapsible frame; array items
+        // stay flat because their parent array already provides the frame.
+        if (depth === 0) {
+            return <div className="space-y-5">{body}</div>;
+        }
+
+        return (
+            <FieldShell onRemove={!isArrayItem ? onRemove : undefined} onMoveUp={onMoveUp} onMoveDown={onMoveDown}>
+                {isArrayItem ? (
+                    <Group label={label} bordered={false} meta={truncate(value.subtitle || value.description)}>
+                        {body}
+                    </Group>
+                ) : (
+                    <Group
+                        label={label}
+                        meta={`${entries.length} field(s)`}
+                        actions={
+                            onRemove && (
+                                <IconButton label="Remove" tone="danger" onClick={onRemove}>
+                                    <TrashIcon />
+                                </IconButton>
+                            )
+                        }
+                    >
+                        {body}
+                    </Group>
+                )}
+            </FieldShell>
         );
     }
 
     /* ---------- booleans ---------- */
     if (typeof value === 'boolean') {
         return (
-            <Row onRemove={onRemove} onMoveUp={onMoveUp} onMoveDown={onMoveDown}>
-                <label className="flex items-center gap-3 py-2 cursor-pointer">
+            <FieldShell onRemove={onRemove} onMoveUp={onMoveUp} onMoveDown={onMoveDown}>
+                <button
+                    type="button"
+                    onClick={() => onChange(!value)}
+                    className="flex items-center gap-3 py-1.5 text-left"
+                >
                     <span
-                        className={`w-10 h-6 rounded-full border transition-colors relative ${value ? 'bg-primary-dark/30 border-primary-dark' : 'bg-white/5 border-white/15'
+                        className={`w-9 h-5 rounded-full border transition-colors relative shrink-0 ${value ? 'bg-primary-dark/30 border-primary-dark' : 'bg-white/5 border-white/15'
                             }`}
                     >
                         <span
-                            className={`absolute top-0.5 w-[18px] h-[18px] rounded-full transition-all ${value ? 'left-[18px] bg-primary-dark' : 'left-0.5 bg-bg-light/60'
+                            className={`absolute top-0.5 w-[14px] h-[14px] rounded-full transition-all ${value ? 'left-[18px] bg-primary-dark' : 'left-0.5 bg-bg-light/60'
                                 }`}
                         />
                     </span>
-                    <input
-                        type="checkbox"
-                        className="sr-only"
-                        checked={value}
-                        onChange={(event) => onChange(event.currentTarget.checked)}
-                    />
                     <span className="font-instrument text-base text-bg-light/80">
-                        {label}: <span className="text-primary-dark">{String(value)}</span>
+                        {label}
+                        <span className="ml-2 text-bg-light/35">{value ? 'on' : 'off'}</span>
                     </span>
-                </label>
-            </Row>
+                </button>
+            </FieldShell>
         );
     }
 
     /* ---------- numbers ---------- */
     if (typeof value === 'number') {
         return (
-            <Row onRemove={onRemove} onMoveUp={onMoveUp} onMoveDown={onMoveDown}>
-                <label className="block space-y-1.5">
-                    <span className="font-instrument text-sm uppercase tracking-wider text-bg-light/50">{label}</span>
+            <FieldShell onRemove={onRemove} onMoveUp={onMoveUp} onMoveDown={onMoveDown}>
+                <Labeled label={label}>
                     <input
                         type="number"
                         className={inputClass}
                         value={Number.isFinite(value) ? value : 0}
                         onInput={(event) => onChange(Number(event.currentTarget.value))}
                     />
-                </label>
-            </Row>
+                </Labeled>
+            </FieldShell>
         );
     }
 
     /* ---------- strings (and null) ---------- */
     const text = value === null || value === undefined ? '' : String(value);
-    const isLong = text.length > 70 || text.includes('\n');
+    const multiline = text.length > 70 || text.includes('\n');
 
     const control =
         name === 'icon' ? (
-            <select
-                className={inputClass}
-                value={text}
-                onChange={(event) => onChange(event.currentTarget.value)}
-            >
-                <option value="">— none —</option>
-                {ICON_NAMES.map((iconName) => (
-                    <option key={iconName} value={iconName}>
-                        {iconName}
-                    </option>
-                ))}
-                {text && !ICON_NAMES.includes(text) && <option value={text}>{text} (unknown)</option>}
-            </select>
-        ) : isLong ? (
+            <IconPicker value={text} onChange={onChange} />
+        ) : multiline ? (
             <textarea
-                rows={Math.min(10, Math.max(3, text.split('\n').length + 1))}
+                rows={Math.min(8, Math.max(3, text.split('\n').length + 1))}
                 className={`${inputClass} leading-relaxed resize-y`}
                 value={text}
                 onInput={(event) => onChange(event.currentTarget.value)}
@@ -263,22 +300,14 @@ export default function JsonField({ name, value, onChange, onRemove, onMoveUp, o
             <input
                 className={inputClass}
                 value={text}
-                placeholder={name === 'href' || name === 'image' || name === 'video' ? 'https://' : ''}
+                placeholder={['href', 'image', 'video'].includes(name) ? 'https://' : ''}
                 onInput={(event) => onChange(event.currentTarget.value)}
             />
         );
 
     return (
-        <Row onRemove={onRemove} onMoveUp={onMoveUp} onMoveDown={onMoveDown}>
-            <label className="block space-y-1.5">
-                <span className="font-instrument text-sm uppercase tracking-wider text-bg-light/50">
-                    {label}
-                    {typeof name === 'string' && name !== label.toLowerCase().replace(/\s+/g, '-') && (
-                        <span className="ml-2 normal-case tracking-normal text-bg-light/25">{name}</span>
-                    )}
-                </span>
-                {control}
-            </label>
-        </Row>
+        <FieldShell onRemove={onRemove} onMoveUp={onMoveUp} onMoveDown={onMoveDown}>
+            <Labeled label={label}>{control}</Labeled>
+        </FieldShell>
     );
 }

@@ -41,6 +41,8 @@ export const defaultContent = {
     heading: 'Featured Projects',
     /** How many projects are shown before "See More Projects" appears. */
     previewCount: 3,
+    /** 'manual' (your card order) | 'title-asc' | 'title-desc' */
+    sortMode: 'manual',
     items: [
       {
         title: 'StrayCat',
@@ -53,6 +55,7 @@ export const defaultContent = {
         image:
           'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80',
         video: 'https://youtu.be/FtutLA63Cp8?si=Zwzbm6FjotzCa5T0',
+        pinned: false,
       },
       {
         title: 'University Department Management System',
@@ -65,6 +68,7 @@ export const defaultContent = {
         image:
           'https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=1200&q=80',
         video: '',
+        pinned: false,
       },
       {
         title: 'Personal Portfolio',
@@ -76,6 +80,7 @@ export const defaultContent = {
         demo: 'https://example.com',
         image: '',
         video: 'https://youtu.be/dQw4w9WgXcQ',
+        pinned: false,
       },
       {
         title: 'Project Alpha',
@@ -88,6 +93,7 @@ export const defaultContent = {
         image:
           'https://images.unsplash.com/photo-1461749280684-dccba630e2f6?auto=format&fit=crop&w=1200&q=80',
         video: '',
+        pinned: false,
       },
       {
         title: 'Project Beta',
@@ -100,6 +106,7 @@ export const defaultContent = {
         image:
           'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=1200&q=80',
         video: '',
+        pinned: false,
       },
       {
         title: 'Project Gamma',
@@ -112,6 +119,7 @@ export const defaultContent = {
         image:
           'https://images.unsplash.com/photo-1555099962-4199c345e5dd?auto=format&fit=crop&w=1200&q=80',
         video: '',
+        pinned: false,
       },
     ],
   },

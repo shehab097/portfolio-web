@@ -21,6 +21,29 @@ const S = ({ className = 'w-5 h-5', children }) => (
   </svg>
 )
 
+/**
+ * Monogram mark (framed initials) for languages whose logo cannot be drawn as
+ * clean line art at 14–16px — reads far better than a guess.
+ */
+const Monogram = ({ text, size = 10 }) => (
+  <g>
+    <rect x="2.75" y="2.75" width="18.5" height="18.5" rx="4.5" fill="none" />
+    <text
+      x="12"
+      y={12 + size * 0.36}
+      textAnchor="middle"
+      fontSize={size}
+      fontWeight="700"
+      letterSpacing="-0.5"
+      fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace"
+      fill="currentColor"
+      stroke="none"
+    >
+      {text}
+    </text>
+  </g>
+)
+
 export const icons = {
   /* Programming */
   java: (p) => (
@@ -39,9 +62,7 @@ export const icons = {
   ),
   cpp: (p) => (
     <S {...p}>
-      <path d="M12 20h9" />
-      <path d="M16.5 15.5v9" />
-      <path d="M5 8h3a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2H5V8z" />
+      <Monogram text="C++" size={9} />
     </S>
   ),
   sql: (p) => (
@@ -108,17 +129,15 @@ export const icons = {
   ),
   javascript: (p) => (
     <S {...p}>
-      <path d="M20 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z" />
-      <path d="M16 16v-3a2 2 0 0 0-2-2h-2" />
-      <path d="M12 11v6" />
+      <Monogram text="JS" size={10} />
     </S>
   ),
 
   /* Machine learning */
   pytorch: (p) => (
     <S {...p}>
-      <path d="M12 2a10 10 0 1 0 10 10" />
-      <path d="M12 12l8-8" />
+      <path d="M12 3c3.9 3.9 6.6 6.7 6.6 10.3A6.6 6.6 0 0 1 5.4 13.3C5.4 9.7 8.1 6.9 12 3z" />
+      <path d="M12 18a3.3 3.3 0 0 0 3.3-3.3c0-1.7-1.3-3.2-3.3-5.2-2 2-3.3 3.5-3.3 5.2A3.3 3.3 0 0 0 12 18z" />
     </S>
   ),
   'scikit-learn': (p) => (
@@ -178,7 +197,11 @@ export const icons = {
   ),
   docker: (p) => (
     <S {...p}>
-      <path d="M2 12h20M2 16h20M6 8h2M10 8h2M14 8h2M6 4h2M10 4h2" />
+      <path d="M3 12h18v2.5a4.5 4.5 0 0 1-4.5 4.5h-9A4.5 4.5 0 0 1 3 14.5z" />
+      <path d="M6.5 12V9.5h3V12" />
+      <path d="M10.5 12V9.5h3V12" />
+      <path d="M14.5 12V9.5h3V12" />
+      <path d="M10.5 9.5V7h3v2.5" />
     </S>
   ),
   tailwind: (p) => (
@@ -195,9 +218,7 @@ export const icons = {
   ),
   typescript: (p) => (
     <S {...p}>
-      <rect x="2" y="2" width="20" height="20" rx="2" />
-      <path d="M7 11h6M10 11v6" />
-      <path d="M14.5 17v-3a1.5 1.5 0 0 1 3 0v3" />
+      <Monogram text="TS" size={10} />
     </S>
   ),
 
@@ -274,6 +295,50 @@ export const icons = {
   sparkle: (p) => (
     <S {...p}>
       <path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z" />
+    </S>
+  ),
+  pin: (p) => (
+    <S {...p}>
+      <path d="M12 17v5" />
+      <path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z" />
+    </S>
+  ),
+  star: (p) => (
+    <S {...p}>
+      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+    </S>
+  ),
+
+  /* Media & UI */
+  image: (p) => (
+    <S {...p}>
+      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+      <circle cx="8.5" cy="8.5" r="1.5" />
+      <path d="M21 15l-5-5L5 21" />
+    </S>
+  ),
+  upload: (p) => (
+    <S {...p}>
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <polyline points="17 8 12 3 7 8" />
+      <line x1="12" y1="3" x2="12" y2="15" />
+    </S>
+  ),
+  video: (p) => (
+    <S {...p}>
+      <rect x="2" y="5" width="14" height="14" rx="2" ry="2" />
+      <path d="M16 11l6-3v8l-6-3z" />
+    </S>
+  ),
+  check: (p) => (
+    <S {...p}>
+      <polyline points="20 6 9 17 4 12" />
+    </S>
+  ),
+  close: (p) => (
+    <S {...p}>
+      <line x1="18" y1="6" x2="6" y2="18" />
+      <line x1="6" y1="6" x2="18" y2="18" />
     </S>
   ),
 }

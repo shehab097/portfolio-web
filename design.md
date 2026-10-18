@@ -13,6 +13,7 @@ How this portfolio is put together, and how the private admin works.
 | Styling | Tailwind CSS 4 (`@tailwindcss/vite`, CSS-first `@theme`) |
 | Auth | Firebase Authentication — Google provider only |
 | Data | Cloud Firestore — one document, `portfolio/content` |
+| Images | Cloud Storage for Firebase — uploaded from `/admin`, URL stored in the document. Requires the Blaze plan (free tier covers a portfolio); falls back to pasted URLs otherwise |
 | Routing | Tiny history router in `src/lib/router.jsx` (no dependency) |
 
 ---
@@ -53,8 +54,9 @@ The whole portfolio is one JSON object (`src/data/defaultContent.js`):
   site:     { title, description },
   navbar:   { links: [{ name, href }] },
   hero:     { role, name, bio, focus, links: [{ label, href }] },
-  projects: { label, heading, previewCount, items: [ { title, subtitle, description,
-               tech[], github, demo, image, video } ] },
+  projects: { label, heading, previewCount, sortMode: "manual" | "title-asc" | "title-desc",
+              items: [ { title, subtitle, description, tech[], github, demo, image, video,
+                         pinned } ] },
   skills:   { label, heading, categories: [ { category, skills: [ { name, icon } ] } ] },
   about:    { label, heading, sections: [ { title, layout: "text" | "cards", items: [...] } ] },
   contact:  { label, heading, intro, note, links: [ { label, value, href, icon } ] }
@@ -111,19 +113,58 @@ Two independent locks:
 
 ## 5. Admin editing model
 
-Draft → Save is the whole model. Field edits and JSON edits both mutate the same in-memory
-draft, which is instantly reflected on `/` (open the site in another tab to preview live).
+Draft → Save is the whole model. Field edits, card edits and JSON edits all mutate the same
+in-memory draft, which is instantly reflected on `/` (open the site in another tab to preview
+live).
 
-- **Fields tab** — a generic recursive editor (`components/admin/JsonField.jsx`) walks the
-  JSON: objects render labelled inputs, arrays get add/remove/reorder, long strings become
-  textareas, and `icon` keys become a dropdown of the icon registry. New fields and new
-  array items can be created without touching code.
-- **JSON tab** — the raw document with validation, format, copy, download and import.
-  Invalid JSON is flagged and cannot be applied.
-- **Top bar** — live status pill (Live · saved …, Unpublished changes, Database
-  unreachable, Offline mode), **Save changes** (`⌘/Ctrl + S` also works), **Revert**,
-  **Sign out**.
-- A `beforeunload` guard warns before leaving with unpublished edits.
+### Layout
+
+One screen, three parts: a **section rail** on the left (each entry shows a count, plus
+*Raw JSON* — *Reset to defaults* is present but disabled for now, gated by
+`RESET_TO_DEFAULTS_ENABLED` in `Admin.jsx`), a **panel header** with the section name and a
+hint, and the **editor** for that section. The header bar holds the status pill,
+**Save** (`⌘/Ctrl + S`), Revert and sign-out. A `beforeunload` guard warns before leaving
+with unpublished edits.
+
+### Projects — card view (`ProjectsEditor` + `ProjectCard`)
+
+- Every project is a card that **collapses and expands**; collapsed cards show a **thumbnail**,
+  the title, subtitle, `#index · tech count` and quick actions.
+- **Add**, **duplicate** and **delete** cards (with an empty state when there are none).
+- **Pin** a card (`pinned: true`) — pinned projects always render first on the site, with a
+  badge, and have their card outlined in the accent colour.
+- **Sort**: `Manual order` (arrange with the ↑ ↓ arrows), `Title A–Z`, or `Title Z–A`.
+  Arrow controls disable themselves when the site sorts automatically.
+- **Thumbnail** (`ImageField`) — shows the current image (or video poster) and the source
+  control. **Uploads are off for now:** `UPLOADS_ENABLED = false` in `lib/storage.js` renders
+  the *Upload image* control disabled, keeps the **Image URL** field visible, and lets Rollup
+  drop the Storage SDK from the bundle (verified: the 30.7 kB chunk only exists when the flag
+  is `true`). Flip the flag once Storage is live — files then go to `portfolio/projects/…`,
+  validated client-side (image type, 5 MB) and server-side (`storage.rules`), and only the
+  download URL is stored in Firestore. A refused upload is remembered in `localStorage`, so
+  the editor offers the URL field instead of a button Firebase has already rejected.
+- **Video poster** — a YouTube URL is previewed through `img.youtube.com` (no iframe), so the
+  admin thumbnail matches what visitors see.
+- Tech stacks are edited as **chips** (Enter or comma to add, Backspace to remove).
+
+### Everything else — generic editor (`JsonField`)
+
+A recursive editor that walks whatever shape the JSON has: top-level sections render flat,
+nested objects and arrays become **collapsible groups**, array items are labelled by their own
+`title` when they have one, long strings become textareas, arrays of strings become chips, and
+`icon` keys become a dropdown of the icon registry. Remove/move controls only appear on hover
+(always visible on touch layouts) so the view stays calm. New fields and array items can be
+created without touching code.
+
+### Raw JSON (`JsonEditor`)
+
+The exact document with validation, format, copy, download and import. Invalid JSON is
+flagged and cannot be applied.
+
+### Ordering is shared
+
+`src/lib/projects.js` owns `orderedProjects()` and `countPinned()`, so the public grid and the
+admin toolbar always agree: **pinned first, then the chosen sort applied within each group.**
 
 ---
 
@@ -137,10 +178,35 @@ src/
 │   ├── auth.jsx               Google sign-in + isAdmin
 │   ├── content.jsx            Firestore-backed content store
 │   ├── router.jsx             history router + link interception
+│   ├── projects.js            ordering + pinning rules (shared)
+│   ├── media.js               YouTube id/embed/poster helpers
+│   ├── storage.js             image upload (lazy-loaded Storage SDK)
 │   └── icons.jsx              icon registry (name → SVG)
 ├── data/defaultContent.js     the portfolio itself (fallback + shape)
 ├── components/                public sections, now data-driven
-│   └── admin/                 JsonField (recursive form), JsonEditor (raw)
+│   └── admin/
+│       ├── controls.jsx       buttons, inputs, icons shared by the editors
+│       ├── ProjectsEditor.jsx card list: add / sort / pin
+│       ├── ProjectCard.jsx    one collapsible project card
+│       ├── ImageField.jsx     thumbnail preview + upload
+│       ├── IconPicker.jsx     visual icon chooser (searchable grid)
+│       ├── TagInput.jsx       chip editor for string arrays
+│       ├── JsonField.jsx      recursive form for every other section
+│       └── JsonEditor.jsx     raw JSON view
 └── pages/                     Home, Login, Admin, NotFound
 firestore.rules                server-side write lockdown
+storage.rules                  upload lockdown (owner, images, 5 MB)
 ```
+
+## 7. Editing shortcuts
+
+| Action | Where |
+| --- | --- |
+| Upload / replace a project image | *Thumbnail* → drop a file or **Upload image** |
+| Pin / unpin a project | Pin icon on the card header |
+| Reorder projects | ↑ ↓ arrows (Manual order mode) |
+| Sort automatically | *Sort by* selector — affects the live site |
+| Add / duplicate / delete a project | Card header icons, or *Add project* |
+| Change how many cards show first | *Cards before “See more”* |
+| Change an icon (skills, about, contact) | Icon field → searchable visual picker |
+| Publish everything | **Save** / `⌘/Ctrl + S` |
